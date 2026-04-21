@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model User {
+  id         String      @id @default(cuid())
+  username   String      @unique
+  password   String
+  role       UserRole    @default(USER)
+  streamKeys StreamKey[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model StreamKey {
+  id           String          @id @default(cuid())
+  key          String          @unique
+  name         String
+  isActive     Boolean         @default(true)
+  customSlug   String?         @unique
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streams      Stream[]
+  domainMaps   DomainMapping[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Stream {
+  id           String      @id @default(cuid())
+  streamKeyId  String
+  streamKey    StreamKey   @relation(fields: [streamKeyId], references: [id], onDelete: Cascade)
+  isLive       Boolean     @default(false)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  viewerCount  Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([streamKeyId, isLive])
+}
+
+model DomainMapping {
+  id          String    @id @default(cuid())
+  domain      String    @unique
+  streamKeyId String
+  streamKey   StreamKey @relation(fields: [streamKeyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([streamKeyId])
+}
